@@ -14,6 +14,25 @@
 
 using namespace std;
 
+/*
+April 1, 2026
+
+Amiran
+1. Lexicon (2)
+2. Constructor
+3. Destructor
+4. Output (3)
+
+Serena
+1. Error handling (2)
+2. Grammar (8)
+
+To-do
+1. Helper (6)
+2. Action (4)
+3. Emit (4)
+*/
+
 // ------------------------------------------------------------- //
 // PUBLIC functions declared in stage0.h //
 /*
