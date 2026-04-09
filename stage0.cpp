@@ -1,394 +1,398 @@
 // Amiran Fields, Serena Reese
-// CS4301
-// Stage 0
+// CS4301 - Stage 0
 
 #include <stage0.h>
-#include <stage0main.C>
+
 
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <map>
-
-#include <stdio.h>		// to close files
-#include <cctype>		// nextChar, nextToken
+#include <iomanip>
+#include <ctime>
+#include <cctype>
 
 using namespace std;
 
-/*
-April 1, 2026
+Compiler::Compiler(char **argv)
+{
+    sourceFile.open(argv[1]);
+    listingFile.open(argv[2]);
+    objectFile.open(argv[3]);
 
-Amiran
-1. Lexicon (2)
-2. Constructor
-3. Destructor
-4. Output (3)
+    if (!sourceFile) processError("Cannot open source file");
+    if (!listingFile) processError("Cannot open listing file");
+    if (!objectFile) processError("Cannot open object file");
 
-Serena
-1. Error handling (2)
-2. Grammar (8)
+    lineNo = 1;
+    nextChar();
+}
 
-To-do
-1. Helper (6)
-2. Action (4)
-3. Emit (4)
+Compiler::~Compiler()
+{
+    sourceFile.close();
+    listingFile.close();
+    objectFile.close();
+}
 
-April 7, 2026
+//////////////////// OUTPUT ////////////////////
 
-Serena
-1. nextChar()
-2. nextToken()
-3. processError()
-4. isSpecialSymbol()
-5. isNonKeyId
-6. prog()
-7. progStmt()
-8. consts()
-9. vars()
-10. beginEndStmt()
-*/
+void Compiler::createListingHeader()
+{
+    time_t now = time(0);
 
-// ------------------------------------------------------------- //
-// PUBLIC functions declared in stage0.h //
-/*
-string getInternalName() const
-storeTypes getDataType() const
-modes getMode() const
-string getValue() const
-allocation getAlloc() const
-int getUnits() const
-void setInternalName(string s)
-void setDataType(storeTypes st)
-void setMode(modes m)
-void setValue(string s)
-void setAlloc(allocation a)
-void setUnits(int i)
-*/
-// ------------------------------------------------------------- //
+    listingFile << "STAGE0: Amiran Fields, Serena Reese "
+                << ctime(&now);
 
-// ------------------------------------------------------------- //
-// GLOBAL VARIABLES
-const char END_OF_FILE = '\0';
-// ------------------------------------------------------------- //
+    listingFile << "LINE NO. SOURCE STATEMENT\n";
 
-class Compiler {
-	
-	// this function opens all files
-	Compiler(char **argv) {					// constructor
-		open sourceFile using argv[1];
-		open listingFile using argv[2];
-		open objectFile using argv[3];
-	}
-	
-	// this function closes all files
-	~Compiler(){							// destructor	// destructor
-		// add error handling for if file already open
-		close sourceFile using argv[1];
-		close listingFile using argv[2];
-		close objectFile using argv[3];
-	}
+    listingFile << setw(5) << lineNo << "|";
+}
 
-// fill in using page 6 of OverallCompilerStructure.pdf for belief
+void Compiler::parser()
+{
+    if (nextToken() != "program")
+        processError("keyword 'program' expected");
 
-//////// OUTPUT SECTION
+    prog();
+}
 
-	void createListingHeader(){
-		return None;
-	}
-	
-	void parser(){
-		return None;
-	}
-	
-	void createListingTrailer(){
-		return None;
-	}
+void Compiler::createListingTrailer()
+{
+    listingFile << "\nCOMPILATION TERMINATED "
+                << errorCount
+                << " ERRORS ENCOUNTERED\n";
+}
 
-// fill in using page 7 of OverallCompilerStructure.pdf
+//////////////////// GRAMMAR ////////////////////
 
-//////// GRAMMAR SECTION
+void Compiler::prog()
+{
+    progStmt();
 
-	void prog(){           // stage 0, production 1
-		if (token != "program")
-			processError("keyword 'program' expected");
-		
-		progStmt();
-		
-		if (token == "const")
-			consts();
-		
-		if (token == "var")
-			vars();
-		
-		if (token != "begin")
-			processError("keyword 'begin' expected");
-		
-		beginEndStmt();
-		
-		if (token != "EOF")
-			processError("no text may follow 'end'");
-	}
-	
-	void progStmt(){       // stage 0, production 2
-		string x;
-		
-		if (token != "program")
-			processError("keyword 'program' expected");
-		
-		x = nextToken();
-		
-		if (!isNonKeyId(x))
-			processError("program name expected");
-		
-		if (nextToken() != ";")
-			processError("semicolon expected");
-		
-		nextToken();
-		
-		code("program", x);
-		insert(x, "PROG_NAME", "CONSTANT", x, "NO", 0);
-	}
-	
-	void consts(){         // stage 0, production 3
-		if (token != "const")
-			processError("keyword 'const' expected");
-		
-		if (!isNonKeyId(nextToken)))
-			processError("non-keyword identifier must follow 'const'");
-		
-		constStmts();
-	}
-	
-	void vars(){           // stage 0, production 4
-		if (token != "var")
-			processError("keyword 'var' expected");
-		
-		if (!isNonKeyId(nextToken()))
-			processError("non-keyword identifier must follow 'var'");
-		
-		varStmts();
-	}
-	
-	void beginEndStmt(){   // stage 0, production 5
-		if (token != "begin")
-			processError("keyword 'begin' expected");
-		
-		if (nextToken() != "end")
-			processError("keyword 'end' expected");
-		
-		if (nextToken() != ".")
-			processError("period expected");
-		
-		nextToken();
-		
-		code("end", ".");
-	}
-	
-	void constStmts(){     // stage 0, production 6
-		cout << "Parsing const statements...\n";		// DEBUGGING
-	}
-	
-	void varStmts(){       // stage 0, production 7
-		cout << "Parsing var statements...\n";			// DEBUGGING
-	}
-	
-	string ids(){          // stage 0, production 8
-		return ids;
-	}
+    if (token == "const")
+        consts();
 
-//////// HELPER SECTION
+    if (token == "var")
+        vars();
 
-	bool isKeyword(string s) const{  // determines if s is a keyword
-		return true;
-	}
-	
-	bool isSpecialSymbol(char c) const{
-		// determines if c is a special symbol
-		
-		string symbols = "+-*/()=,;:.";
-		return symbols.find(c) != string::npos;
-	}
-	
-	bool isNonKeyId(string s) const{ // determines if s is a non_key_id
-		if (s.empty() || !islower(s[0]))
-			return false;
-		
-		for (char c : s)
-			if (!isalnum(c) && c != '_')
-				return false;
-			
-		// KEYWORDS TO EXCLUDE
-		if (s == "program" || s == "const" || s == "var" ||
-			s == "begin" || s == "end")
-			return false;
-			
-		return true;
-	}
-	
-	bool isInteger(string s) const{  // determines if s is an integer
-		return true;
-	}
-	
-	bool isBoolean(string s) const{  // determines if s is a boolean
-		return true;
-	}
-	
-	bool isLiteral(string s) const{  // determines if s is a literal
-		return true;
-	}
+    if (token != "begin")
+        processError("keyword 'begin' expected");
 
-// fill in using page 12 of OverallCompilerStructure.pdf
+    beginEndStmt();
 
-//////// ACTION SECTION
-	void insert(string externalName, storeTypes inType, modes inMode,
-				string inValue, allocation inAlloc, int inUnits){
-					cout << "INSERT: " << name << endl;		// for debugging
-				}
-				
-	storeTypes whichType(string name){ // tells which data type a name has
-		return name;
-	}
-	
-	string whichValue(string name){ // tells which value a name has
-		return name;
-	}
-	
-	void code(string op, string operand1 = "", string operand2 = ""){
-		cout << "CODE: " << op << " " << arg << endl;		// for debugging
-	}
+    if (token != "EOF")
+        processError("no text may follow 'end'");
+}
 
-// fill in using page 14 of OverallCompilerStructure.pdf
+void Compiler::progStmt()
+{
+    string x;
 
-//////// EMIT SECTION
-	void emit(string label = "", string instruction = "", string operands = "",
-			string comment = ""){
-				return None;
-			}
-			
-	void emitPrologue(string progName, string = ""){
-		return None;
-	}
-	
-	void emitEpilogue(string = "", string = ""){
-		return None;
-	}
-	
-	void emitStorage(){
-		return None;
-	}
+    nextToken(); // program name
+    x = token;
 
-// fill in using page 15 of OverallCompilerStructure.pdf, be detailed in printing
+    if (!isNonKeyId(x))
+        processError("program name expected");
 
-//////// LEXICON SECTION
-	
-	char nextChar(){			// gets raw chars
-		if (!inFile.get(ch)){	// reads one char at a time from input
-			ch = END_OF_FILE;	// stores char read in global var ch
-		} else {
-			cout << ch;			// outputs to console, change to listing file output
-		}
-		
-		return ch;		// returns the next character or END_OF_FILE marker
-	}
-		
-	string nextToken(){			// builds tokens out of raw chars
-		// groups chars into tokens (words, nums, symbols)
-		token = "";
-		
-		while (token == ""){
-			switch (ch){		// stores result in token
-				case '{':		// COMMENT {...}
-					do {
-						nextChar();
-					} while (ch != '}' && ch != END_OF_FILE);
-					if (ch == END_OF_FILE)
-						processError("Unexpected end of file inside comment");
-					
-					nextChar();		// move past the '}'
-					break;
-					
-				case '}':		// INVALID '}'
-					processError("'}' cannot begin a token");
-					break;
-					
-				default:		// WHITESPACE
-					if (isspace(ch)){
-						nextChar();
-					} else if (isSpecialSymbol(ch)){	// SPECIAL SYMBOLS
-						token = ch;
-						nextChar();
-					} else if (islower(ch)){		// IDENTIFIER (starting with lowercase)
-						token = ch;
-						while (true){
-							nextChar();
-							if (isalnum(ch) || ch == '_')
-								token += ch;
-							else
-								break;
-						}
-					} else if (isdigit(ch)){	// NUMBER
-						token = ch;
-						while (true){
-							nextChar();
-							if (isdigit(ch))
-								token += ch;
-							else
-								break;
-						}
-					} else if (ch == END_OF_FILE){	// END OF FILE
-						token = "EOF";
-					} else {						// ILLEGAL SYMBOL
-						processError("Illegal symbol");
-					}
-				}
-			}
-		return token;		// returns the next token or END_OF_FILE marker
-	}
-	  
-//////// ERROR HANDLING SECTION
+    nextToken();
+    if (token != ";")
+        processError("semicolon expected");
 
-	string genInternalName(storeTypes stype) const{
-		return stype;
-	}
-	
-	void processError(string err){		// error handling
-		cerr << "\nError: " << msg << endl;
-		exit(1);
-	}
+    nextToken();
 
-	// ------------------------------------------------------------- //
-	// PRIVATE variables declared in stage0.h //
-	/*
-	map<string, SymbolTableEntry> symbolTable;
-	ifstream sourceFile;
-	ofstream listingFile;
-	ofstream objectFile;
-	string token;          // the next token
-	char ch;               // the next character of the source file
-	uint errorCount = 0;   // total number of errors encountered
-	uint lineNo = 0;       // line numbers for the listing
-	*/
-	// ------------------------------------------------------------- //
+    code("program", x);
+    insert(x, PROG_NAME, CONSTANT, x, NO, 0);
+}
 
-// To test the program:
-/*
-make stage0
+void Compiler::consts()
+{
+    nextToken();
 
-DATA FILES:
-ls /usr/local/4301/data/stage0/
+    if (!isNonKeyId(token))
+        processError("identifier expected after const");
 
-cp /usr/local/4301/data/stage0/001.dat .
-cat 001.dat
-./stage0 001.dat 001.lst 001.asm
+    constStmts();
+}
 
-cat 001.lst
-cat 001.asm
+void Compiler::vars()
+{
+    nextToken();
 
-EDIT MAKEFILE:
-targetsAsmLanguage = 001
-./001
-diff /usr/local/4301/data/stage0/001.lst 001.lst
-diff /usr/local/4301/data/stage0/001.asm 001.asm
-*/
+    if (!isNonKeyId(token))
+        processError("identifier expected after var");
 
-};
+    varStmts();
+}
+
+void Compiler::beginEndStmt()
+{
+    nextToken();
+
+    if (token != "end")
+        processError("keyword 'end' expected");
+
+    nextToken();
+
+    if (token != ".")
+        processError("period expected");
+
+    nextToken();
+
+    code("end", ".");
+}
+
+//////////////////// CONST ////////////////////
+
+void Compiler::constStmts()
+{
+    string x, y;
+
+    x = token;
+
+    nextToken();
+    if (token != "=")
+        processError("'=' expected");
+
+    nextToken();
+
+    if (token == "not")
+    {
+        nextToken();
+        y = token;
+        y = "not " + y;
+    }
+    else
+    {
+        y = token;
+    }
+
+    nextToken();
+    if (token != ";")
+        processError("';' expected");
+
+    insert(x, whichType(y), CONSTANT, whichValue(y), YES, 1);
+
+    nextToken();
+
+    if (isNonKeyId(token))
+        constStmts();
+}
+
+//////////////////// VAR ////////////////////
+
+void Compiler::varStmts()
+{
+    string x, type;
+
+    x = ids();
+
+    if (token != ":")
+        processError("':' expected");
+
+    nextToken();
+
+    if (token == "integer")
+        type = "integer";
+    else if (token == "boolean")
+        type = "boolean";
+    else
+        processError("type expected");
+
+    nextToken();
+
+    if (token != ";")
+        processError("';' expected");
+
+    // insert each id (simplified: assumes single for now)
+    insert(x, (type == "integer" ? INTEGER : BOOLEAN),
+           VARIABLE, "", YES, 1);
+
+    nextToken();
+
+    if (isNonKeyId(token))
+        varStmts();
+}
+
+string Compiler::ids()
+{
+    string id = token;
+
+    if (!isNonKeyId(id))
+        processError("identifier expected");
+
+    nextToken();
+
+    if (token == ",")
+    {
+        nextToken();
+        ids();
+    }
+
+    return id;
+}
+
+//////////////////// HELPER ////////////////////
+
+bool Compiler::isKeyword(string s) const
+{
+    return (s == "program" || s == "const" || s == "var" ||
+            s == "begin" || s == "end" ||
+            s == "integer" || s == "boolean" ||
+            s == "true" || s == "false" || s == "not");
+}
+
+bool Compiler::isSpecialSymbol(char c) const
+{
+    string s = "=,:;.+-";
+    return s.find(c) != string::npos;
+}
+
+bool Compiler::isNonKeyId(string s) const
+{
+    if (s.empty() || !islower(s[0])) return false;
+
+    for (char c : s)
+        if (!isalnum(c) && c != '_') return false;
+
+    return !isKeyword(s);
+}
+
+bool Compiler::isInteger(string s) const
+{
+    for (char c : s)
+        if (!isdigit(c)) return false;
+    return true;
+}
+
+bool Compiler::isBoolean(string s) const
+{
+    return (s == "true" || s == "false");
+}
+
+bool Compiler::isLiteral(string s) const
+{
+    return isInteger(s) || isBoolean(s);
+}
+
+//////////////////// ACTION ////////////////////
+
+void Compiler::insert(string name, storeTypes type, modes mode,
+                      string value, allocation alloc, int units)
+{
+    if (symbolTable.count(name) > 0)
+        processError("multiple definition");
+
+    symbolTable.insert({
+        name,
+        SymbolTableEntry(name, type, mode, value, alloc, units)
+    });
+}
+
+storeTypes Compiler::whichType(string name)
+{
+    if (isInteger(name)) return INTEGER;
+    if (isBoolean(name)) return BOOLEAN;
+
+    auto it = symbolTable.find(name);
+
+    if (it == symbolTable.end())
+        processError("undefined identifier");
+
+    return it->second.getDataType();
+}
+
+string Compiler::whichValue(string name)
+{
+    if (isInteger(name) || isBoolean(name))
+        return name;
+
+    auto it = symbolTable.find(name);
+
+    if (it == symbolTable.end())
+        processError("undefined identifier");
+
+    return it->second.getValue();
+}
+
+void Compiler::code(string op, string operand1, string operand2)
+{
+    // minimal stage0
+}
+
+//////////////////// LEXICON ////////////////////
+
+char Compiler::nextChar()
+{
+    if (!sourceFile.get(ch))
+        ch = END_OF_FILE;
+    else
+    {
+        listingFile << ch;
+
+        if (ch == '\n')
+        {
+            lineNo++;
+            listingFile << setw(5) << lineNo << "|";
+        }
+    }
+    return ch;
+}
+
+string Compiler::nextToken()
+{
+    token = "";
+
+    while (token == "")
+    {
+        if (isspace(ch))
+            nextChar();
+
+        else if (ch == '{')
+        {
+            do { nextChar(); }
+            while (ch != '}' && ch != END_OF_FILE);
+
+            if (ch == END_OF_FILE)
+                processError("unterminated comment");
+
+            nextChar();
+        }
+        else if (isSpecialSymbol(ch))
+        {
+            token = ch;
+            nextChar();
+        }
+        else if (islower(ch))
+        {
+            while (isalnum(ch) || ch == '_')
+            {
+                token += ch;
+                nextChar();
+            }
+        }
+        else if (isdigit(ch))
+        {
+            while (isdigit(ch))
+            {
+                token += ch;
+                nextChar();
+            }
+        }
+        else if (ch == END_OF_FILE)
+            token = "EOF";
+        else
+            processError("illegal symbol");
+    }
+
+    return token;
+}
+
+//////////////////// ERROR ////////////////////
+
+void Compiler::processError(string err)
+{
+    listingFile << "\nError: " << err << endl;
+    errorCount++;
+    exit(EXIT_FAILURE);
+}
