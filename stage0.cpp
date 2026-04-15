@@ -3,7 +3,6 @@
 // Stage 0
 
 #include <stage0.h>
-#include <stage0main.C>
 
 #include <iostream>
 #include <fstream>
