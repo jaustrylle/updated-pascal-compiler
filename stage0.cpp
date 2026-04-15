@@ -12,42 +12,13 @@
 
 #include <stdio.h>		// to close files
 #include <cctype>		// nextChar, nextToken
-#include <iomanip>
+#include <iomanip>		// format in/out streams using setw
 #include <ctime>		// time in listing header
 
 using namespace std;
 
 /*
-April 1, 2026
-
-Amiran
-1. Lexicon (2)
-2. Constructor
-3. Destructor
-4. Output (3)
-
-Serena
-1. Error handling (2)
-2. Grammar (8)
-
-To-do
-1. Helper (6)
-2. Action (4)
-3. Emit (4)
-
-April 7, 2026
-
-Serena
-1. nextChar()
-2. nextToken()
-3. processError()
-4. isSpecialSymbol()
-5. isNonKeyId
-6. prog()
-7. progStmt()
-8. consts()
-9. vars()
-10. beginEndStmt()
+more work needed on emit functions
 */
 
 // ------------------------------------------------------------- //
@@ -68,7 +39,11 @@ void setUnits(int i)
 */
 
 // ------------------------------------------------------------- //
-	
+// STATIC GLOBAL COUNTERS
+    int I_count = 0;
+    int B_count = 0;
+// ------------------------------------------------------------- //
+
 Compiler::Compiler(char **argv)		// constructor
 {
 	sourceFile.open(argv[1]);
@@ -147,44 +122,29 @@ void Compiler::prog()           // stage 0, production 1
 }
 
 void Compiler::progStmt()       // stage 0, production 2
-	string x = nextToken();
-
-	if (token != "program")
+{
+	string x = nextToken();		// gets program name
+	
+	if (x != "program")
+	{
 		processError("keyword 'program' expected");
+	}
 	
 	if (!isNonKeyId(x))
+	{
 		processError("program name expected");
+	}
 	
-	if (nextToken() != ";")
+	x = nextToken();
+	
+	if (x != ";")
+	{
 		processError("semicolon expected");
-	
-	nextToken();
-	
+	}
+		
 	code("program", x);
-	insert(x, "PROG_NAME", "CONSTANT", x, "NO", 0);
+	insert(x, PROG_NAME, CONSTANT, x, NO, 0);
 }
-
-/*
-void Compiler::progStmt()
-{
-string x;
-
-nextToken(); // program name
-x = token;
-
-if (!isNonKeyId(x))
-	processError("program name expected");
-
-nextToken();
-if (token != ";")
-	processError("semicolon expected");
-
-nextToken();
-
-code("program", x);
-insert(x, PROG_NAME, CONSTANT, x, NO, 0);
-}
-*/
 
 void Compiler::consts()         // stage 0, production 3
 {
@@ -195,7 +155,7 @@ void Compiler::consts()         // stage 0, production 3
 		processError("keyword 'const' expected");
 	}
 	
-	if (!isNonKeyId(nextToken)))
+	if (!isNonKeyId(nextToken()))
 	{
 		processError("non-keyword identifier must follow 'const'");
 	}
@@ -212,7 +172,9 @@ void Compiler::vars()           // stage 0, production 4
 		processError("keyword 'var' expected");
 	}
 	
-	if (!isNonKeyId(nextToken()))
+	x = nextToken();
+	
+	if (!isNonKeyId(x))
 	{
 		processError("non-keyword identifier must follow 'var'");
 	}
@@ -248,38 +210,42 @@ void Compiler::beginEndStmt()   // stage 0, production 5
 
 void Compiler::constStmts()     // stage 0, production 6
 {
-	string x, y;
+	string x, y, z;
 
-	x = token;
-
-	nextToken();
+	x = nextToken();
 	
-	if (token != "=")
-		processError("'=' expected");
-
-	nextToken();
-
-	if (token == "not")
+	if (x != "=")
 	{
-		nextToken();
-		y = token;
-		y = "not " + y;
+		processError("'=' expected");
+	}
+
+	y = nextToken();
+
+	if (y == "not")
+	{
+		z = nextToken();
+		y = "not " + z;
 	}
 	else
 	{
-		y = token;
+		y = y;
 	}
 
-	nextToken();
-	if (token != ";")
+	z = nextToken();
+	
+	if (z != ";")
+	{
 		processError("';' expected");
+	}
 
 	insert(x, whichType(y), CONSTANT, whichValue(y), YES, 1);
 
-	nextToken();
+	x = nextToken();
 
-	if (isNonKeyId(token))
+	if (isNonKeyId(x))
+	{
 		constStmts();
+	}
 }
 
 //////////////////// VAR ////////////////////
@@ -390,26 +356,31 @@ bool Compiler::isLiteral(string s) const  // determines if s is a literal
 void Compiler::insert(string externalName, storeTypes inType, modes inMode,
 			string inValue, allocation inAlloc, int inUnits)
 {
-	if (symbolTable.count(name) > 0)
+	if (symbolTable.count(externalName) > 0)
+	{
 		processError("multiple definition");
+	}
 
-	symbolTable.insert({
-		name,
-		SymbolTableEntry(name, type, mode, value, alloc, units)
+	symbolTable.insert
+	({
+		externalName,
+		SymbolTableEntry(externalName, inType, inMode, inValue, inAlloc, inUnits)
 	});
 }
 			
 storeTypes Compiler::whichType(string name) // tells which data type a name has
 {
-	if (isInteger(name)) return INTEGER;
-	if (isBoolean(name)) return BOOLEAN;
+    if (isInteger(name)) return INTEGER;
+    if (isBoolean(name)) return BOOLEAN;
 
-	auto it = symbolTable.find(name);
+    auto it = symbolTable.find(name);
 
-	if (it == symbolTable.end())
-		processError("undefined identifier");
+    if (it == symbolTable.end())
+    {
+        processError("undefined identifier");
+    }
 
-	return it->second.getDataType();
+    return it->second.getDataType();
 }
 
 string Compiler::whichValue(string name) // tells which value a name has
@@ -425,34 +396,111 @@ string Compiler::whichValue(string name) // tells which value a name has
 	return it->second.getValue();
 }
 
-void Compiler::code(string op, string operand1 = "", string operand2 = "")
+void Compiler::code(string op, string operand1, string operand2)
 {
-	cout << "CODE: " << op << " " << arg << endl;		// for debugging
+    if(op == "program")
+	{
+        emitPrologue(operand1);
+    }
+	else if(op == "end")
+	{
+        emitEpilogue();
+    }
+	else
+	{
+        processError("compiler error: illegal arguments to code()");
+    }
 }
-
-// fill in using page 14 of OverallCompilerStructure.pdf
 
 //////////////////// EMIT ////////////////////
 
-void Compiler::emit(string label = "", string instruction = "", string operands = "",
-		string comment = "")
+void Compiler::emit(string label, string instruction, string operands,
+		string comment)
 {
-	return None;
+    objectFile << std::left                      // left justification in objectFile
+               << std::setw(8)  << label        // label field of width 8
+               << std::setw(8)  << instruction  // instruction field of width 8
+               << std::setw(24) << operands     // operands in field of width 24
+               << comment                        // output comment
+               << "\n";
 }
 		
-void Compiler::emitPrologue(string progName, string = "")
+void Compiler::emitPrologue(string progName, string s)
 {
-	return None;
+	// output identifying comments at beg of objectFile
+	time_t now = time(0);
+    std::string timeStr = ctime(&now);
+    objectFile << "; SERENA REESE, AMIRAN FIELDS\t\t" << timeStr << "\n";
+
+    // output %INCLUDE directives
+    objectFile << "%INCLUDE \"Along32.inc\"\n";
+    objectFile << "%INCLUDE \"Macros_Along.inc\"\n";
+
+    objectFile << "\n"; // blank line
+	
+	// emit SECTION .text
+    emit("SECTION", ".text");
+	
+	// emit global _start, program, progName
+    emit("global", "_start", "", "; program " + progName);
+
+    objectFile << "\n";	// blank line
+	
+	// emit _start:
+    emit("_start:");
 }
 
-void Compiler::emitEpilogue(string = "", string = "")
+void Compiler::emitEpilogue(string x, string y)
 {
-	return None;
+	// emit Exit{0}
+	emit("", "Exit", "{0}");
+	
+	objectFile << "\n";	// blank line
+	
+	// emitStorage
+	emitStorage();
 }
 
 void Compiler::emitStorage()
 {
-	return None;
+	// emit SECTION .data for entries in symbolTable with YES and CONSTANT
+	emit("SECTION", ".data");
+
+    for(const auto& pair : symbolTable){
+        const std::string& name = pair.first;
+        const SymbolTableEntry& entry = pair.second;
+
+        if (entry.getAlloc() == YES && entry.getMode() == CONSTANT){
+            std::string value = entry.getValue();
+
+            // Convert boolean constants
+            if (value == "false" || value == "FALSE")
+                value = "0";
+            else if (value == "true" || value == "TRUE")
+                value = "-1";
+            else if (value.empty())
+                value = "0";  // fallback
+
+            emit(entry.getInternalName(), "dd", value, "; " + name);
+        }
+    }
+
+	// call emit to output a line to objectFile 
+    objectFile << "\n";
+
+	// emit SECTION .bss for entries in symbolTable with YES and VARIABLE
+    emit("SECTION", ".bss");
+
+    for(const auto& pair : symbolTable){
+        const std::string& name = pair.first;
+        const SymbolTableEntry& entry = pair.second;
+
+        if(entry.getAlloc() == YES && entry.getMode() == VARIABLE){
+            emit(entry.getInternalName(), "resd", std::to_string(entry.getUnits()), "; " + name);
+        }
+    }
+	
+	// call emit to output line to objectFile
 }
 
 //////////////////// LEXICON ////////////////////
@@ -533,7 +581,18 @@ string Compiler::nextToken()			// builds tokens out of raw chars
 
 string Compiler::genInternalName(storeTypes stype) const
 {
-	return stype;
+    if (stype == INTEGER)
+    {
+        return "I" + std::to_string(I_count++);
+    }
+    else if (stype == BOOLEAN)
+    {
+        return "B" + std::to_string(B_count++);
+    }
+    else
+    {
+        return "X";
+    }
 }
 
 void Compiler::processError(string err)		// error handling
