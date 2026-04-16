@@ -38,9 +38,14 @@ void setUnits(int i)
 */
 
 // ------------------------------------------------------------- //
-// STATIC GLOBAL COUNTERS
-    int I_count = 0;
-    int B_count = 0;
+// GLOBAL VARIABLES AND FUNCTIONS
+
+int I_count = 0;
+int B_count = 0;
+bool listingHeaderCreated = false;
+bool lexerInitialized = false;
+bool begChar = true;
+
 // ------------------------------------------------------------- //
 
 Compiler::Compiler(char **argv)		// constructor
@@ -54,7 +59,6 @@ Compiler::Compiler(char **argv)		// constructor
 	if (!objectFile) processError("Cannot open object file");
 
 	lineNo = 1;
-	nextChar();
 }
 
 // this function closes all files
@@ -71,22 +75,18 @@ Compiler::~Compiler()							// destructor
 void Compiler::Compiler::createListingHeader()
 {
 	time_t now = time(0);
-
-	listingFile << "STAGE0: Amiran Fields, Serena Reese "
-				<< ctime(&now);
-
-	listingFile << "LINE NO. SOURCE STATEMENT\n";
-
-	listingFile << setw(5) << lineNo << "|";
+				
+    // Listing header output to listingFile, not console; SOURCE STATEMENT begins in line 23
+    listingFile << "STAGE0:\tAMIRAN FIELDS, SERENA REESE\t\t" << ctime(&now) << "\n\n";
+    listingFile << std::left << "LINE NO.\t" << std::setw(23) << "SOURCE STATEMENT" << "\n\n";
+	
+	listingHeaderCreated = true;
 }
-
 
 void Compiler::parser()
 {
-	if (nextToken() != "program")
-		processError("keyword 'program' expected");
-
-	prog();
+	token = nextToken();
+    prog();
 }
 
 void Compiler::createListingTrailer()
@@ -100,9 +100,6 @@ void Compiler::createListingTrailer()
 
 void Compiler::prog()           // stage 0, production 1
 {
-	if (token != "program")
-		processError("keyword 'program' expected");
-	
 	progStmt();
 	
 	if (token == "const")
@@ -121,40 +118,44 @@ void Compiler::prog()           // stage 0, production 1
 }
 
 void Compiler::progStmt()       // stage 0, production 2
-{
-	string x = nextToken();		// gets program name
-	
-	if (x != "program")
+{	
+	if (token != "program")
 	{
 		processError("keyword 'program' expected");
 	}
 	
-	if (!isNonKeyId(x))
+	token = nextToken();		// get program name
+	
+	if (!isNonKeyId(token))
 	{
 		processError("program name expected");
 	}
 	
-	x = nextToken();
+	string progName = token;	// save program name
 	
-	if (x != ";")
+	token = nextToken();		// get semicolon
+	
+	if (token != ";")
 	{
 		processError("semicolon expected");
 	}
 		
-	code("program", x);
-	insert(x, PROG_NAME, CONSTANT, x, NO, 0);
+	code("program", progName);
+	insert(progName, PROG_NAME, CONSTANT, progName, NO, 0);
+	
+	token = nextToken();		// advance for next section
 }
 
 void Compiler::consts()         // stage 0, production 3
-{
-	string x = nextToken();
-	
+{	
 	if (token != "const")
 	{
 		processError("keyword 'const' expected");
 	}
 	
-	if (!isNonKeyId(nextToken()))
+	token = nextToken();
+	
+	if (!isNonKeyId(token))
 	{
 		processError("non-keyword identifier must follow 'const'");
 	}
@@ -163,17 +164,15 @@ void Compiler::consts()         // stage 0, production 3
 }
 
 void Compiler::vars()           // stage 0, production 4
-{
-	string x = nextToken();
-	
+{	
 	if (token != "var")
 	{
 		processError("keyword 'var' expected");
 	}
 	
-	x = nextToken();
+	token = nextToken();
 	
-	if (!isNonKeyId(x))
+	if (!isNonKeyId(token))
 	{
 		processError("non-keyword identifier must follow 'var'");
 	}
@@ -182,25 +181,27 @@ void Compiler::vars()           // stage 0, production 4
 }
 
 void Compiler::beginEndStmt()   // stage 0, production 5
-{
-	string x = nextToken();
-	
+{	
 	if (token != "begin")
 	{
 		processError("keyword 'begin' expected");
 	}
 	
-	if (nextToken() != "end")
+	token = nextToken();
+	
+	if (token != "end")
 	{
 		processError("keyword 'end' expected");
 	}
 	
-	if (nextToken() != ".")
+	token = nextToken();
+	
+	if (token != ".")
 	{
 		processError("period expected");
 	}
 	
-	nextToken();
+	token = nextToken();
 	
 	code("end", ".");
 }
@@ -209,39 +210,39 @@ void Compiler::beginEndStmt()   // stage 0, production 5
 
 void Compiler::constStmts()     // stage 0, production 6
 {
-	string x, y, z;
-
-	x = nextToken();
+	string name = token;
+	token = nextToken();
 	
-	if (x != "=")
+	if (token != "=")
 	{
 		processError("'=' expected");
 	}
 
-	y = nextToken();
+	token = nextToken();
+	string value;
 
-	if (y == "not")
+	if (token == "not")
 	{
-		z = nextToken();
-		y = "not " + z;
+		token = nextToken();
+		value = "not " + token;
 	}
 	else
 	{
-		y = y;
+		value = token;
 	}
 
-	z = nextToken();
+	token = nextToken();
 	
-	if (z != ";")
+	if (token != ";")
 	{
 		processError("';' expected");
 	}
 
-	insert(x, whichType(y), CONSTANT, whichValue(y), YES, 1);
+	insert(name, whichType(value), CONSTANT, whichValue(value), YES, 1);
 
-	x = nextToken();
+	token = nextToken();
 
-	if (isNonKeyId(x))
+	if (isNonKeyId(token))
 	{
 		constStmts();
 	}
@@ -258,7 +259,7 @@ void Compiler::varStmts()       // stage 0, production 7
 	if (token != ":")
 		processError("':' expected");
 
-	nextToken();
+	token = nextToken();
 
 	if (token == "integer")
 		type = "integer";
@@ -267,7 +268,7 @@ void Compiler::varStmts()       // stage 0, production 7
 	else
 		processError("type expected");
 
-	nextToken();
+	token = nextToken();
 
 	if (token != ";")
 		processError("';' expected");
@@ -276,7 +277,7 @@ void Compiler::varStmts()       // stage 0, production 7
 	insert(x, (type == "integer" ? INTEGER : BOOLEAN),
 		   VARIABLE, "", YES, 1);
 
-	nextToken();
+	token = nextToken();
 
 	if (isNonKeyId(token))
 		varStmts();
@@ -289,11 +290,11 @@ string Compiler::ids()          // stage 0, production 8
 	if (!isNonKeyId(id))
 		processError("identifier expected");
 
-	nextToken();
+	token = nextToken();
 
 	if (token == ",")
 	{
-		nextToken();
+		token = nextToken();
 		ids();
 	}
 
@@ -428,7 +429,8 @@ void Compiler::emitPrologue(string progName, string s)
 {
 	// output identifying comments at beg of objectFile
 	time_t now = time(0);
-    std::string timeStr = ctime(&now);
+	
+    string timeStr = ctime(&now);
     objectFile << "; SERENA REESE, AMIRAN FIELDS\t\t" << timeStr << "\n";
 
     // output %INCLUDE directives
@@ -466,11 +468,11 @@ void Compiler::emitStorage()
 	emit("SECTION", ".data");
 
     for(const auto& pair : symbolTable){
-        const std::string& name = pair.first;
+        const string& name = pair.first;
         const SymbolTableEntry& entry = pair.second;
 
         if (entry.getAlloc() == YES && entry.getMode() == CONSTANT){
-            std::string value = entry.getValue();
+            string value = entry.getValue();
 
             // Convert boolean constants
             if (value == "false" || value == "FALSE")
@@ -491,7 +493,7 @@ void Compiler::emitStorage()
     emit("SECTION", ".bss");
 
     for(const auto& pair : symbolTable){
-        const std::string& name = pair.first;
+        const string& name = pair.first;
         const SymbolTableEntry& entry = pair.second;
 
         if(entry.getAlloc() == YES && entry.getMode() == VARIABLE){
@@ -506,27 +508,49 @@ void Compiler::emitStorage()
 
 char Compiler::nextChar()			// gets raw chars
 {
-	if (!sourceFile.get(ch)){	// reads one char at a time from input
-		ch = END_OF_FILE;	// stores char read in global var ch
-	} else {
+    char next;
+
+    // Try to read next char
+    if (!sourceFile.get(next)) {
+        ch = END_OF_FILE;
+        listingFile << "\n";
+        return ch;
+    }
+
+    ch = next;
+
+    // Print line number for the *first* line if nothing has printed yet
+    if (listingHeaderCreated && begChar) {
+        listingFile << std::right << std::setw(5) << lineNo << "|";
+        begChar = false;
+    }
+
+    // Print the character
+    if (listingHeaderCreated)
+	{
 		listingFile << ch;
-		
-		if (ch == '\n')
-		{
-			lineNo++;
-			listingFile << setw(5) << lineNo << "|";
-		}
 	}
 	
-	return ch;		// returns the next character or END_OF_FILE marker
+	if (ch == '\n')		// flag new line
+	{
+		lineNo++;
+		begChar = true;
+	}
+
+    return ch;
 }
 	
 string Compiler::nextToken()			// builds tokens out of raw chars
 {
-	// groups chars into tokens (words, nums, symbols)
+	if (!lexerInitialized)
+	{
+		lexerInitialized = true;
+		nextChar();
+	}
+		
 	token = "";
 	
-	while (token == ""){
+	while (token == ""){		// if ch not initialized, we lose chars
 		switch (ch){		// stores result in token
 			case '{':		// COMMENT {...}
 				do {
@@ -546,10 +570,10 @@ string Compiler::nextToken()			// builds tokens out of raw chars
 				if (isspace(ch)){
 					nextChar();
 				} else if (isSpecialSymbol(ch)){	// SPECIAL SYMBOLS
-					token = ch;
+					token = string(1, ch);
 					nextChar();
 				} else if (islower(ch)){		// IDENTIFIER (starting with lowercase)
-					token = ch;
+					token = string(1, ch);
 					while (true){
 						nextChar();
 						if (isalnum(ch) || ch == '_')
@@ -558,7 +582,7 @@ string Compiler::nextToken()			// builds tokens out of raw chars
 							break;
 					}
 				} else if (isdigit(ch)){	// NUMBER
-					token = ch;
+					token = string(1, ch);
 					while (true){
 						nextChar();
 						if (isdigit(ch))
@@ -568,6 +592,7 @@ string Compiler::nextToken()			// builds tokens out of raw chars
 					}
 				} else if (ch == END_OF_FILE){	// END OF FILE
 					token = "EOF";
+					return token;
 				} else {						// ILLEGAL SYMBOL
 					processError("Illegal symbol");
 				}
@@ -582,11 +607,11 @@ string Compiler::genInternalName(storeTypes stype) const
 {
     if (stype == INTEGER)
     {
-        return "I" + std::to_string(I_count++);
+        return "I" + to_string(I_count++);
     }
     else if (stype == BOOLEAN)
     {
-        return "B" + std::to_string(B_count++);
+        return "B" + to_string(B_count++);
     }
     else
     {
