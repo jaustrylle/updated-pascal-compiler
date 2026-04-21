@@ -1,0 +1,60 @@
+make stage0
+g++ -g -Wall -std=c++11 -c stage0.cpp -I/usr/local/4301/include/ -I.
+In file included from stage0.cpp:4:0:
+stage0.h:160:2: error: #endif without #if
+ #endif
+  ^~~~~
+stage0.h:10:12: error: redefinition of ‘const char END_OF_FILE’
+ const char END_OF_FILE = '$';      // arbitrary choice
+            ^~~~~~~~~~~
+In file included from stage0.h:1:0,
+                 from stage0.cpp:4:
+/usr/local/4301/include/stage0.h:11:12: note: ‘const char END_OF_FILE’ previously defined here
+ const char END_OF_FILE = '$';      // arbitrary choice
+            ^~~~~~~~~~~
+In file included from stage0.cpp:4:0:
+stage0.h:12:6: error: multiple definition of ‘enum storeTypes’
+ enum storeTypes {INTEGER, BOOLEAN, PROG_NAME};
+      ^~~~~~~~~~
+In file included from stage0.h:1:0,
+                 from stage0.cpp:4:
+/usr/local/4301/include/stage0.h:13:6: note: previous definition here
+ enum storeTypes {INTEGER, BOOLEAN, PROG_NAME};
+      ^~~~~~~~~~
+In file included from stage0.cpp:4:0:
+stage0.h:13:6: error: multiple definition of ‘enum modes’
+ enum modes {VARIABLE, CONSTANT};
+      ^~~~~
+In file included from stage0.h:1:0,
+                 from stage0.cpp:4:
+/usr/local/4301/include/stage0.h:14:6: note: previous definition here
+ enum modes {VARIABLE, CONSTANT};
+      ^~~~~
+In file included from stage0.cpp:4:0:
+stage0.h:14:6: error: multiple definition of ‘enum allocation’
+ enum allocation {YES, NO};
+      ^~~~~~~~~~
+In file included from stage0.h:1:0,
+                 from stage0.cpp:4:
+/usr/local/4301/include/stage0.h:15:6: note: previous definition here
+ enum allocation {YES, NO};
+      ^~~~~~~~~~
+In file included from stage0.cpp:4:0:
+stage0.h:16:7: error: redefinition of ‘class SymbolTableEntry’
+ class SymbolTableEntry
+       ^~~~~~~~~~~~~~~~
+In file included from stage0.h:1:0,
+                 from stage0.cpp:4:
+/usr/local/4301/include/stage0.h:17:7: note: previous definition of ‘class SymbolTableEntry’
+ class SymbolTableEntry
+       ^~~~~~~~~~~~~~~~
+In file included from stage0.cpp:4:0:
+stage0.h:99:7: error: redefinition of ‘class Compiler’
+ class Compiler
+       ^~~~~~~~
+In file included from stage0.h:1:0,
+                 from stage0.cpp:4:
+/usr/local/4301/include/stage0.h:100:7: note: previous definition of ‘class Compiler’
+ class Compiler
+       ^~~~~~~~
+make: *** [Makefile:34: stage0.o] Error 1
