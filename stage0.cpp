@@ -112,8 +112,7 @@ void Compiler::parser()
 
     prog();
 
-    if (token != "EOF")
-        processError("no text may follow 'end'");
+    createListingTrailer();
 }
 
 void Compiler::createListingTrailer()
