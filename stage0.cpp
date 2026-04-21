@@ -1,13 +1,14 @@
 // Amiran Fields, Serena Reese
 // CS4301 - Stage 0
 
-#include <stage0.h>
+#include "stage0.h"
+
 #include <iomanip>
 #include <ctime>
 #include <cctype>
 #include <vector>
 
-vector<string> symbolOrder;
+
 
 using namespace std;
 
@@ -327,7 +328,7 @@ void Compiler::insert(string name, storeTypes type, modes mode,
             one,
             SymbolTableEntry(internalName, type, mode, value, alloc, units)
         });
-		symbolOrder.push_back(one);
+		
 		
 
         start = (pos == string::npos) ? name.size() : pos + 1;
@@ -406,14 +407,19 @@ void Compiler::emitPrologue(string progName, string)
 
     objectFile << "%INCLUDE \"Along32.inc\"" << endl;
     objectFile << "%INCLUDE \"Macros_Along.inc\"" << endl;
+    objectFile << endl;
 
     emit("SECTION", ".text");
     objectFile << left << setw(8) << "global"
-            << setw(8) << "_start"
-            << setw(24) << ""
-            << "; program " << progName << endl;
+               << setw(8) << "_start"
+               << setw(24) << ""
+               << "; program " << progName.substr(0, 15) << endl;
     emit("_start:", "", "", "");
 }
+
+
+
+
 
 void Compiler::emitEpilogue(string, string)
 {
@@ -421,35 +427,49 @@ void Compiler::emitEpilogue(string, string)
     emitStorage();
 }
 
+
+
+
+
 void Compiler::emitStorage()
 {
     emit("SECTION", ".data");
 
-    for (auto &name : symbolOrder)
+    for (map<string, SymbolTableEntry>::iterator it = symbolTable.begin();
+         it != symbolTable.end(); ++it)
     {
-        auto &entry = symbolTable.at(name);
+        string name = it->first;
+        SymbolTableEntry entry = it->second;
 
-        if (entry.getMode() == CONSTANT &&
-            entry.getDataType() != PROG_NAME)
+        if (entry.getMode() == CONSTANT && entry.getDataType() != PROG_NAME)
         {
             string val = entry.getValue();
-            if (val == "true") val = "-1";
-            if (val == "false") val = "0";
 
-            emit(entry.getInternalName(), "dd", val, "; " + name);
+            if (val == "true")
+                val = "-1";
+            else if (val == "false")
+                val = "0";
+
+            emit(entry.getInternalName(), "dd", val, "; " + name.substr(0, 15));
         }
     }
 
     emit("SECTION", ".bss");
 
-    for (auto &name : symbolOrder)
+    for (map<string, SymbolTableEntry>::iterator it = symbolTable.begin();
+         it != symbolTable.end(); ++it)
     {
-        auto &entry = symbolTable.at(name);
+        string name = it->first;
+        SymbolTableEntry entry = it->second;
 
         if (entry.getMode() == VARIABLE)
-            emit(entry.getInternalName(), "resd", "1", "; " + name);
+            emit(entry.getInternalName(), "resd", "1", "; " + name.substr(0, 15));
     }
 }
+
+
+
+
 
 //////////////////// LEXER ////////////////////
 
@@ -527,5 +547,6 @@ void Compiler::processError(string err)
 {
     listingFile << "Error: Line " << lineNo << ": " << err << endl;
     errorCount++;
+    createListingTrailer();
     exit(EXIT_FAILURE);
 }
