@@ -1,6 +1,18 @@
 # updated-pascal-compiler
 Spring 2026
 
+Stage 0:
+File I/O / constructor / destructor
+Listing + object file generation
+Symbol table class usage
+Recursive descent parser structure
+program / const / var / begin end
+Identifier + constant insertion
+Type/value lookup for constants
+emitPrologue / emitEpilogue / emitStorage
+Scanner (nextChar, nextToken)
+Error handling
+
 Compilation instructions:
 STEP 1
 mkdir stage0
